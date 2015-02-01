@@ -126,11 +126,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, const HistoryStats& h, Piece
   // In ProbCut we generate only captures that are better than the parent's
   // captured piece.
   captureThreshold = PieceValue[MG][pt];
+
   ttMove = (ttm && pos.pseudo_legal(ttm) ? ttm : MOVE_NONE);
-
-  if (ttMove && (!pos.capture(ttMove) || pos.see(ttMove) <= captureThreshold))
-      ttMove = MOVE_NONE;
-
   end += (ttMove != MOVE_NONE);
 }
 
