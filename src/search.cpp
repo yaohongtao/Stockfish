@@ -283,38 +283,6 @@ void MainThread::search() {
   }
   else
   {
-      if (    TB::Cardinality >=  rootPos.count<ALL_PIECES>(WHITE)
-                                + rootPos.count<ALL_PIECES>(BLACK)
-          && !rootPos.can_castle(ANY_CASTLING))
-      {
-          // If the current root position is in the tablebases, then RootMoves
-          // contains only moves that preserve the draw or the win.
-          TB::RootInTB = Tablebases::root_probe(rootPos, rootMoves, TB::Score);
-
-          if (TB::RootInTB)
-              TB::Cardinality = 0; // Do not probe tablebases during the search
-
-          else // If DTZ tables are missing, use WDL tables as a fallback
-          {
-              // Filter out moves that do not preserve the draw or the win.
-              TB::RootInTB = Tablebases::root_probe_wdl(rootPos, rootMoves, TB::Score);
-
-              // Only probe during search if winning
-              if (TB::Score <= VALUE_DRAW)
-                  TB::Cardinality = 0;
-          }
-
-          if (TB::RootInTB)
-          {
-              TB::Hits = rootMoves.size();
-
-              if (!TB::UseRule50)
-                  TB::Score =  TB::Score > VALUE_DRAW ?  VALUE_MATE - MAX_PLY - 1
-                             : TB::Score < VALUE_DRAW ? -VALUE_MATE + MAX_PLY + 1
-                                                      :  VALUE_DRAW;
-          }
-      }
-
       for (Thread* th : Threads)
           if (th != this)
               th->start_searching();
@@ -1656,4 +1624,37 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     }
 
     return false;
+}
+
+void Tablebases::filter_root_moves(Position& pos, Search::RootMoves& rootMoves) {
+
+    if (TB::Cardinality < popcount(pos.pieces()) || pos.can_castle(ANY_CASTLING))
+        return;
+
+    // If the current root position is in the tablebases, then RootMoves
+    // contains only moves that preserve the draw or the win.
+    TB::RootInTB = Tablebases::root_probe(pos, rootMoves, TB::Score);
+
+    if (TB::RootInTB)
+        TB::Cardinality = 0; // Do not probe tablebases during the search
+
+    else // If DTZ tables are missing, use WDL tables as a fallback
+    {
+        // Filter out moves that do not preserve the draw or the win.
+        TB::RootInTB = Tablebases::root_probe_wdl(pos, rootMoves, TB::Score);
+
+        // Only probe during search if winning
+        if (TB::Score <= VALUE_DRAW)
+            TB::Cardinality = 0;
+    }
+
+    if (TB::RootInTB)
+    {
+        TB::Hits = rootMoves.size();
+
+        if (!TB::UseRule50)
+            TB::Score =  TB::Score > VALUE_DRAW ?  VALUE_MATE - MAX_PLY - 1
+                       : TB::Score < VALUE_DRAW ? -VALUE_MATE + MAX_PLY + 1
+                                                :  VALUE_DRAW;
+    }
 }
